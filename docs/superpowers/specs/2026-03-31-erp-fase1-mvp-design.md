@@ -201,8 +201,15 @@ Todas protegidas via `router.beforeEach` — redireciona para `/login` se nao au
 - Todas as queries Prisma filtram por `empresa_id`
 
 ### Recuperacao de Senha
-1. `POST /auth/recuperar-senha` → envia email com token
+1. `POST /auth/recuperar-senha` → envia email com token (expira em 1h)
 2. `POST /auth/redefinir-senha` → valida token, atualiza senha
+
+### Refresh Token
+- Refresh token armazenado em httpOnly cookie (nao acessivel via JS)
+- Endpoint `POST /auth/refresh` → recebe cookie, retorna novo access token
+- Access token: expira em 15 minutos
+- Refresh token: expira em 7 dias, com rotacao (novo refresh token a cada uso)
+- Axios interceptor: ao receber 401, tenta `POST /auth/refresh` silenciosamente. Se falhar, limpa store e redireciona para /login
 
 ### Pinia Stores
 - **authStore:** token, refreshToken, usuario, empresa, login(), logout(), isAuthenticated
@@ -269,6 +276,14 @@ autocomplete(q)    → GET /{modulo}/busca{Modulo}?q=
 **Centros de Custo:**
 - Campos: nome, descricao, ativo
 
+**Grupos de Produto:** (lookup, gerenciado dentro do modulo Produtos)
+- Campos: nome
+- CRUD simples acessivel via botao "Gerenciar grupos" na tela de produtos
+
+**Unidades:** (lookup, gerenciado dentro do modulo Produtos)
+- Campos: nome, sigla (ex: "Unidade" / "UN", "Quilograma" / "KG")
+- CRUD simples acessivel via botao "Gerenciar unidades" na tela de produtos
+
 ---
 
 ## 7. Dashboard
@@ -286,9 +301,19 @@ autocomplete(q)    → GET /{modulo}/busca{Modulo}?q=
 - Vendas do mes — grafico de barras
 - Contas bancarias — barras horizontais
 
-**Endpoint:** `GET /dashboard/resumo` retorna todos os dados agregados.
+**Endpoint:** `GET /dashboard/resumo`
 
-Na Fase 1, o dashboard exibe dados mockados/seed. A logica real de calculo vem com o modulo Financeiro (Fase 3).
+Na Fase 1 (sem modulo financeiro), o dashboard exibe contadores reais de entidades cadastradas:
+```json
+{
+  "total_clientes": 15,
+  "total_fornecedores": 8,
+  "total_produtos": 42,
+  "total_servicos": 10,
+  "financeiro": null
+}
+```
+Os cards financeiros e graficos de fluxo de caixa ficam com placeholder "Disponivel na Fase 3". A logica real de calculo vem com o modulo Financeiro.
 
 ---
 
@@ -346,10 +371,40 @@ Modulos da Fase 1:
 ```
 
 ### Convencoes
-- IDs: strings numericas
-- Valores monetarios: string com virgula `"1.500,00"`
-- Datas: string `"DD/MM/YYYY"`
-- Booleanos: 0/1
+- IDs: strings numericas (serializados como string no JSON, BigInt no banco)
+- Valores monetarios: `Decimal(18,2)` no banco, formatados como `"1.500,00"` na API/frontend via utils/money.ts
+- Datas: `DateTime` no banco, serializadas como ISO 8601 na API, formatadas como `DD/MM/YYYY` no frontend
+- Booleanos: `Boolean` nativo no Prisma/PostgreSQL
+
+### Tratamento de Erros
+| HTTP Status | Uso | Formato |
+|-------------|-----|---------|
+| 200 | Sucesso | `{ code: 200, status: "success", message: "...", data: {...} }` |
+| 400 | Validacao (Zod) | `{ code: 400, status: "error", message: "Dados invalidos", data: { errors: [{ field, message }] } }` |
+| 401 | Nao autenticado | `{ code: 401, status: "error", message: "Token invalido" }` |
+| 403 | Sem permissao | `{ code: 403, status: "error", message: "Sem permissao" }` |
+| 404 | Nao encontrado | `{ code: 404, status: "error", message: "Registro nao encontrado" }` |
+| 409 | Conflito (duplicado) | `{ code: 409, status: "error", message: "CNPJ ja cadastrado" }` |
+| 500 | Erro interno | `{ code: 500, status: "error", message: "Erro interno" }` |
+
+### Paginacao
+Query params padrao: `page` (default 1), `per_page` (default 20), `sort_by`, `sort_order` (asc/desc), `q` (busca)
+```json
+{
+  "code": 200,
+  "status": "success",
+  "data": { "items": [...], "total": 150, "page": 1, "per_page": 20, "total_pages": 8 }
+}
+```
+
+### CORS
+Fastify CORS plugin habilitado em dev para aceitar requests do Vite dev server (porta diferente). Em producao, configurado para o dominio do frontend.
+
+### Soft Delete
+Convencao global: `excluir` faz soft delete (`ativo = false`). Listagens filtram `ativo = true` por padrao. Hard delete apenas via admin/migration.
+
+### Justificativa POST para editar/excluir
+Segue o padrao da API do GestaoClick para manter compatibilidade conceitual. Tradeoff aceito: perde semantica HTTP padrao, mas mantem consistencia com a referencia.
 
 ---
 
@@ -357,60 +412,93 @@ Modulos da Fase 1:
 
 ```prisma
 model Empresa {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
   razao_social     String
   nome_fantasia    String?
-  cnpj             String   @unique
+  cnpj             String    @unique
   email            String?
   telefone         String?
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  usuarios         Usuario[]
+  grupos_usuarios  GrupoUsuario[]
+  clientes         Cliente[]
+  fornecedores     Fornecedor[]
+  produtos         Produto[]
+  servicos         Servico[]
+  formas_pagamento FormaPagamento[]
+  categorias       CategoriaFinanceira[]
+  centros_custo    CentroCusto[]
+  grupos_produto   GrupoProduto[]
+  unidades         Unidade[]
 }
 
 model Usuario {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
   empresa_id       BigInt
   grupo_usuario_id BigInt?
   nome             String
-  email            String   @unique
+  email            String    @unique
   senha_hash       String
-  ativo            Int      @default(1)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  empresa          Empresa        @relation(fields: [empresa_id], references: [id])
+  grupo_usuario    GrupoUsuario?  @relation(fields: [grupo_usuario_id], references: [id])
 }
 
 model GrupoUsuario {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
   empresa_id       BigInt
   nome             String
-  created_at       DateTime @default(now())
+  created_at       DateTime  @default(now())
+
+  empresa          Empresa      @relation(fields: [empresa_id], references: [id])
+  permissoes       Permissao[]
+  usuarios         Usuario[]
 }
 
 model Permissao {
-  id                BigInt   @id @default(autoincrement())
+  id                BigInt    @id @default(autoincrement())
+  empresa_id        BigInt
   grupo_usuario_id  BigInt
   modulo            String
   acao              String
-  permitido         Int      @default(1)
+  permitido         Boolean   @default(true)
+
+  empresa           Empresa       @relation(fields: [empresa_id], references: [id])
+  grupo_usuario     GrupoUsuario  @relation(fields: [grupo_usuario_id], references: [id])
+
+  @@index([empresa_id])
+  @@index([grupo_usuario_id])
 }
 
 model Cliente {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
   empresa_id       BigInt
   nome             String
   cpf_cnpj         String?
-  tipo_pessoa      String   @default("F")
+  tipo_pessoa      String    @default("F")
   email            String?
   telefone         String?
   celular          String?
   observacoes      String?
-  ativo            Int      @default(1)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  empresa          Empresa            @relation(fields: [empresa_id], references: [id])
+  enderecos        ClienteEndereco[]
+  contatos         ClienteContato[]
+
+  @@index([empresa_id])
 }
 
 model ClienteEndereco {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
   cliente_id       BigInt
   cep              String?
   logradouro       String?
@@ -419,19 +507,28 @@ model ClienteEndereco {
   bairro           String?
   cidade           String?
   uf               String?
+
+  cliente          Cliente   @relation(fields: [cliente_id], references: [id], onDelete: Cascade)
+
+  @@index([empresa_id])
 }
 
 model ClienteContato {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
   cliente_id       BigInt
   nome             String
   telefone         String?
   email            String?
   cargo            String?
+
+  cliente          Cliente   @relation(fields: [cliente_id], references: [id], onDelete: Cascade)
+
+  @@index([empresa_id])
 }
 
 model Fornecedor {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
   empresa_id       BigInt
   razao_social     String
   nome_fantasia    String?
@@ -439,13 +536,20 @@ model Fornecedor {
   email            String?
   telefone         String?
   observacoes      String?
-  ativo            Int      @default(1)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  empresa          Empresa              @relation(fields: [empresa_id], references: [id])
+  enderecos        FornecedorEndereco[]
+  contatos         FornecedorContato[]
+
+  @@index([empresa_id])
 }
 
 model FornecedorEndereco {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
   fornecedor_id    BigInt
   cep              String?
   logradouro       String?
@@ -454,93 +558,143 @@ model FornecedorEndereco {
   bairro           String?
   cidade           String?
   uf               String?
+
+  fornecedor       Fornecedor @relation(fields: [fornecedor_id], references: [id], onDelete: Cascade)
+
+  @@index([empresa_id])
 }
 
 model FornecedorContato {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
   fornecedor_id    BigInt
   nome             String
   telefone         String?
   email            String?
   cargo            String?
+
+  fornecedor       Fornecedor @relation(fields: [fornecedor_id], references: [id], onDelete: Cascade)
+
+  @@index([empresa_id])
 }
 
 model GrupoProduto {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
   empresa_id       BigInt
   nome             String
-  created_at       DateTime @default(now())
+  created_at       DateTime  @default(now())
+
+  empresa          Empresa    @relation(fields: [empresa_id], references: [id])
+  produtos         Produto[]
+
+  @@index([empresa_id])
 }
 
 model Unidade {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
   empresa_id       BigInt
   nome             String
   sigla            String
+
+  empresa          Empresa    @relation(fields: [empresa_id], references: [id])
+  produtos         Produto[]
+
+  @@index([empresa_id])
 }
 
 model Produto {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
   empresa_id       BigInt
   nome             String
   sku              String?
-  valor_venda      String   @default("0,00")
-  valor_custo      String   @default("0,00")
+  valor_venda      Decimal   @default(0) @db.Decimal(18, 2)
+  valor_custo      Decimal   @default(0) @db.Decimal(18, 2)
   unidade_id       BigInt?
   grupo_id         BigInt?
   descricao        String?
-  ativo            Int      @default(1)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  empresa          Empresa        @relation(fields: [empresa_id], references: [id])
+  unidade          Unidade?       @relation(fields: [unidade_id], references: [id])
+  grupo            GrupoProduto?  @relation(fields: [grupo_id], references: [id])
+  lojas            ProdutoLoja[]
+
+  @@index([empresa_id])
 }
 
 model ProdutoLoja {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
   produto_id       BigInt
   empresa_id       BigInt
-  estoque_atual    String   @default("0")
-  estoque_minimo   String   @default("0")
+  estoque_atual    Decimal   @default(0) @db.Decimal(18, 4)
+  estoque_minimo   Decimal   @default(0) @db.Decimal(18, 4)
+
+  produto          Produto   @relation(fields: [produto_id], references: [id], onDelete: Cascade)
+
+  @@index([empresa_id])
 }
 
 model Servico {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
   empresa_id       BigInt
   nome             String
-  valor            String   @default("0,00")
+  valor            Decimal   @default(0) @db.Decimal(18, 2)
   descricao        String?
-  ativo            Int      @default(1)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  empresa          Empresa   @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model FormaPagamento {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
   empresa_id       BigInt
   nome             String
   tipo             String
-  ativo            Int      @default(1)
-  created_at       DateTime @default(now())
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+
+  empresa          Empresa   @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 
 model CategoriaFinanceira {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
   empresa_id       BigInt
   nome             String
   tipo             String
   pai_id           BigInt?
-  ativo            Int      @default(1)
-  created_at       DateTime @default(now())
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+
+  empresa          Empresa               @relation(fields: [empresa_id], references: [id])
+  pai              CategoriaFinanceira?  @relation("CategoriaHierarquia", fields: [pai_id], references: [id])
+  filhas           CategoriaFinanceira[] @relation("CategoriaHierarquia")
+
+  @@index([empresa_id])
 }
 
 model CentroCusto {
-  id               BigInt   @id @default(autoincrement())
+  id               BigInt    @id @default(autoincrement())
   empresa_id       BigInt
   nome             String
   descricao        String?
-  ativo            Int      @default(1)
-  created_at       DateTime @default(now())
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+
+  empresa          Empresa   @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
 }
 ```
+
+> **Nota:** Valores monetarios sao `Decimal(18,2)` no banco. A camada de servico formata para `"1.500,00"` nas respostas da API e parseia de volta no input, centralizado em `shared/utils/money.ts`.
 
 ---
 
