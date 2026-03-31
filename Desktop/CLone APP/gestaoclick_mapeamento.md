@@ -987,3 +987,406 @@ Visíveis no dashboard "Meus aplicativos":
 | `data_competencia` | date | Data de competência |
 | `descricao` | text | Descrição |
 | `observacoes` | textarea | Observações |
+
+---
+
+## 24. ESTRUTURA DE PAYLOAD POST (API `https://app.api.click.app`)
+
+> Capturado via interceptação de XHR/Fetch e inspeção do modelo Vue `$data`.
+> Todos os endpoints usam `Content-Type: application/json`.
+> Padrão de resposta: `{"code":200,"status":"success","message":"...","data":"<id>","redirect":{"action":"index"}}`
+
+### Padrão de Resposta da API
+```json
+{
+  "code": 200,
+  "status": "success",
+  "message": "Produto cadastrado com sucesso.",
+  "meta": [],
+  "redirect": { "action": "index" },
+  "data": "90886768"
+}
+```
+
+---
+
+### POST `/produtos/adicionar`
+```json
+{
+  "data": {
+    "Produto": {
+      "nome": "string",
+      "codigo": "string",
+      "codigo_barra": "string",
+      "movimenta_estoque": 1,
+      "possui_nf": 1,
+      "possui_variacao": 0,
+      "possui_composicao": 0,
+      "quantidade_saida": "1,00",
+      "valor_custo_medio": "0,00",
+      "valor_despesas_acessorias": "0,00",
+      "valor_outras_despesas": "0,00",
+      "valor_custo": "0,00",
+      "peso": "0,000",
+      "largura": "0,000",
+      "altura": "0,000",
+      "comprimento": "0,000",
+      "comissao": "0",
+      "ativo": 1,
+      "comercializar_loja_virtual": 0,
+      "destaque_loja_virtual": 0,
+      "produto_virtual": 0,
+      "segmentar_tributacao": 0,
+      "vendido_separadamente": 1,
+      "comercializavel_pdv": 1,
+      "unidade_entrada_id": "string (id)",
+      "nome_unidade_entrada": "Unidade",
+      "sigla_unidade_entrada": "UN",
+      "unidade_saida_id": "string (id)",
+      "nome_unidade_saida": "Unidade",
+      "sigla_unidade_saida": "UN",
+      "grupo_id": null
+    },
+    "GruposProduto": { "id": null, "nome": null },
+    "MarcasProduto": { "id": null, "nome": null },
+    "ProdutosGrade": [],
+    "ProdutosAtributo": [],
+    "ProdutosImportacao": [],
+    "ProdutosTiposValoresProduto": {
+      "<tipo_valor_id>": {
+        "lucro_utilizado": "0,00",
+        "lucro_sugerido": "0,00",
+        "valor_venda": "0,00"
+      }
+    },
+    "ProdutosEstoque": [],
+    "ProdutosFoto": [],
+    "Composicao": [],
+    "ProdutosComposicao": [],
+    "Fornecedor": {},
+    "ProdutosFornecedor": [],
+    "ProdutosLoja": [],
+    "Loja": {},
+    "ProdutosTributacao": {},
+    "TiposValoresProduto": [],
+    "ProdutosGruposTributacao": []
+  }
+}
+```
+
+**Endpoints auxiliares do Produto:**
+- `POST /produtos/verificaCodigo` — `{"data":{"Produto":{"codigo":"PROD-001"}}}` — valida unicidade do código
+
+---
+
+### POST `/clientes/adicionar`
+```json
+{
+  "data": {
+    "Cliente": {
+      "ativo": 1,
+      "tipo_pessoa": "PF|PJ|ES",
+      "pj_tipo_contribuinte": "",
+      "nome": "string",
+      "pf_nome_social": null,
+      "pf_cpf": null,
+      "pj_cnpj": null,
+      "pj_razao_social": null,
+      "pj_inscricao_estadual": null,
+      "telefone": "string",
+      "email": "string",
+      "celular": "string",
+      "fax": null,
+      "site": null,
+      "vendedor_id": "string (id)",
+      "nome_vendedor": "string",
+      "classificacao": null,
+      "tipo": "CL|FOR|CL_FOR",
+      "limite_credito": "0,00",
+      "permitir_ultrapassar_limite_credito": 0
+    },
+    "ClientesEndereco": [
+      {
+        "cidade_id": null,
+        "nome_cidade": "",
+        "pais": null,
+        "cep": "string",
+        "logradouro": "string",
+        "numero": "string",
+        "complemento": null,
+        "bairro": "string",
+        "random": 1234567890.0
+      }
+    ],
+    "ClientesContato": [],
+    "ClientesAtributo": [],
+    "paises": { "<id>": "nome_pais" }
+  }
+}
+```
+
+---
+
+### POST `/orcamentos_produtos/adicionar` e `/orcamentos_servicos/adicionar`
+```json
+{
+  "data": {
+    "Pedido": {
+      "id": null,
+      "codigo": "string",
+      "data": "DD/MM/YYYY",
+      "horario": "HH:MM",
+      "previsao_entrega": "DD/MM/YYYY",
+      "horario_entrega": "",
+      "canal_venda_id": "string (id)",
+      "nome_canal_venda": "string",
+      "centro_custo_id": "",
+      "nome_centro_custo": "",
+      "cliente_id": "string (id)",
+      "nome_cliente": "string",
+      "forma_pagamento_id": "",
+      "numero_parcelas": "",
+      "data_primeira_parcela": "DD/MM/YYYY",
+      "forma_pagamento": "",
+      "exibir_endereco": 0,
+      "exibir_valor_total": 1,
+      "exibir_pagamento": 1,
+      "valor_produtos": "0,00",
+      "valor_servicos": "0,00",
+      "valor_frete": "0,00",
+      "valor_outros": "0,00",
+      "desconto_valor": "0,00",
+      "desconto_porcentagem": "0,00",
+      "valor_total": "0,00",
+      "vendedor_id": "string (id)",
+      "nome_vendedor": "string",
+      "aos_cuidados_de": "",
+      "introducao": "",
+      "observacoes": "",
+      "campo_aux_texto_1": "",
+      "campo_aux_texto_2": "",
+      "prioridade": null,
+      "pedidos_agrupados": []
+    },
+    "PedidosEquipamento": [],
+    "PedidosProduto": [
+      {
+        "tipo": "P",
+        "produto_id": "string (id)",
+        "nome_produto": "string",
+        "detalhes": "",
+        "estoque_id": "",
+        "possui_variacao": 0,
+        "movimenta_estoque": 1,
+        "sigla_unidade": "UND",
+        "quantidade": "string",
+        "largura": "",
+        "altura": "",
+        "tipo_desconto": "R$|%",
+        "tipo_valor_id": "",
+        "nome_tipo_valor": "",
+        "desconto_valor": "",
+        "desconto_porcentagem": "",
+        "valor_custo": "",
+        "valor_venda": "",
+        "valor_total": "",
+        "campo_aux_float_1": "",
+        "chave": 0.12345
+      }
+    ],
+    "PedidosParcela": [],
+    "PedidosEndereco": {
+      "cep": "",
+      "logradouro": "",
+      "numero": "",
+      "complemento": "",
+      "codigo_cidade": "",
+      "nome_cidade": "",
+      "estado": "",
+      "nome_pais": "",
+      "pedido_id": null
+    },
+    "PedidosArquivo": [],
+    "PedidosAtributo": []
+  }
+}
+```
+
+---
+
+### POST `/ordens_servicos/adicionar`
+> Mesma estrutura do Orçamento, com campos extras no `Pedido` e `PedidosEquipamento`:
+
+```json
+{
+  "data": {
+    "Pedido": {
+      "...todos os campos do Orçamento...",
+      "tecnico_id": "string (id)",
+      "nome_tecnico": "string",
+      "situacao_id": "string (id)",
+      "nome_situacao": "string"
+    },
+    "PedidosEquipamento": [
+      {
+        "equipamento": "string",
+        "marca": "string",
+        "modelo": "string",
+        "serie": "string",
+        "condicoes": "string",
+        "defeitos": "string",
+        "acessorios": "string",
+        "solucao": "string",
+        "laudo": "string",
+        "termos_garantia": "string",
+        "campo_aux_text_1": "",
+        "campo_aux_text_2": "",
+        "campo_aux_text_3": "",
+        "chave": 0.12345
+      }
+    ],
+    "PedidosProduto": [ "...mesmo schema do Orçamento..." ],
+    "PedidosParcela": [],
+    "PedidosEndereco": { "...mesmo schema do Orçamento..." },
+    "PedidosArquivo": [],
+    "PedidosAtributo": []
+  }
+}
+```
+
+---
+
+### POST `/compras/adicionar`
+```json
+{
+  "data": {
+    "Compra": {
+      "id": null,
+      "codigo": "string",
+      "data_emissao": "DD/MM/YYYY",
+      "canal_venda_id": "",
+      "nome_canal_venda": "",
+      "centro_custo_id": "",
+      "nome_centro_custo": "",
+      "fornecedor_id": "string (id)",
+      "nome_fornecedor": "string",
+      "forma_pagamento_id": "",
+      "numero_parcelas": "",
+      "data_primeira_parcela": "DD/MM/YYYY",
+      "forma_pagamento": "",
+      "exibir_endereco": 0,
+      "exibir_valor_total": 1,
+      "exibir_pagamento": 1,
+      "pagar_frete": 0,
+      "valor_produtos": "0,00",
+      "valor_servicos": "0,00",
+      "valor_impostos": "0,00",
+      "valor_frete": "0,00",
+      "valor_outros": "0,00",
+      "desconto_valor": "0,00",
+      "desconto_porcentagem": "0,00",
+      "valor_total": "0,00",
+      "vendedor_id": "",
+      "nome_vendedor": "",
+      "observacoes": "",
+      "intervalo_dias": "",
+      "situacao_id": "string (id)",
+      "nome_situacao": "string"
+    },
+    "ComprasProduto": [
+      {
+        "tipo": "P",
+        "produto_id": "string (id)",
+        "nome_produto": "string",
+        "detalhes": "",
+        "estoque_id": "",
+        "quantidade_saida": 1,
+        "possui_variacao": 0,
+        "movimenta_estoque": 1,
+        "unidade": "UND",
+        "quantidade": "string",
+        "largura": "",
+        "altura": "",
+        "tipo_desconto": "R$|%",
+        "tipo_valor_id": "",
+        "nome_tipo_valor": "",
+        "desconto_valor": "",
+        "desconto_porcentagem": "",
+        "valor_custo": "",
+        "valor_total": "",
+        "chave": 0.12345
+      }
+    ],
+    "ComprasParcela": [],
+    "ComprasArquivo": [],
+    "ComprasAtributo": []
+  }
+}
+```
+
+---
+
+### POST `/movimentacoes_financeiras/adicionar`
+```json
+{
+  "data": {
+    "MovimentacoesFinanceira": {
+      "nome": "string",
+      "loja_id": "string (id)",
+      "nome_loja": "string",
+      "data_vencimento": "DD/MM/YYYY",
+      "data_baixa": "DD/MM/YYYY",
+      "ocorrencia": "U|R",
+      "gerar_pagamento": "string",
+      "gerar_fatura": "1|0",
+      "limite": 0,
+      "baixado": 0,
+      "entidade": "C|F",
+      "data_emissao": "DD/MM/YYYY",
+      "possui_rateio": "0|1",
+      "tipo_parcela": "D|M",
+      "repeticao": "M|S|A",
+      "data_primeira_parcela": "DD/MM/YYYY",
+      "quantidade": "string",
+      "intervalo_dias": "string",
+      "forma_pagamento_id": "string (id)",
+      "situacao_id": "string (id)",
+      "valor": "string",
+      "juros": "",
+      "desconto": "",
+      "taxa_banco": "",
+      "taxa_operadora": "",
+      "valor_total": "0,00"
+    },
+    "FormasPagamento": [],
+    "MovimentacoesFinanceirasAtributo": [],
+    "MovimentacoesFinanceirasArquivo": [],
+    "MovimentacoesFinanceirasParcela": [],
+    "MovimentacoesFinanceirasCategoria": [],
+    "Movimentacoes_agrupadas": []
+  }
+}
+```
+
+---
+
+## 25. ARQUITETURA DA API
+
+```
+Frontend:  https://gestaoclick.com       (Vue.js SPA + SSR híbrido)
+API REST:  https://app.api.click.app     (Backend separado)
+
+Autenticação: Cookie de sessão compartilhado entre os dois domínios
+Headers:      Content-Type: application/json
+              Cookie: <session_token>
+
+Convenções:
+- Payload sempre encapsulado em: { "data": { "EntidadePrincipal": {...}, "RelacaoN": [...] } }
+- IDs são strings numéricas (não integers)
+- Valores monetários usam vírgula decimal: "1.500,00"
+- Datas no formato DD/MM/YYYY
+- Booleanos como 0/1 (integers)
+- Arrays de itens têm campo "chave" (float random) como chave temporária no frontend
+- Resposta de sucesso sempre: { "code": 200, "status": "success", "data": "<id_criado>" }
+- Resposta de erro: { "code": 400|422, "status": "error", "message": "...", "data": [] }
+```
