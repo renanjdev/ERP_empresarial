@@ -1,6 +1,7 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import cookie from '@fastify/cookie'
+import { authRoutes } from './modules/auth/auth.routes.js'
 
 const app = Fastify({ logger: true })
 
@@ -25,6 +26,8 @@ await app.register(cors, {
 await app.register(cookie)
 
 app.get('/health', async () => ({ status: 'ok' }))
+
+await app.register(authRoutes)
 
 const port = Number(process.env.PORT) || 3000
 await app.listen({ port, host: '0.0.0.0' })
