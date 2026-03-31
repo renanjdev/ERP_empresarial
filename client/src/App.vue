@@ -1,6 +1,7 @@
 <template>
-  <div>
-    <h1>ERP Empresarial</h1>
-    <p>Setup complete. Router will be added in Task 12.</p>
-  </div>
+  <RouterView />
 </template>
+
+<script setup lang="ts">
+import { RouterView } from 'vue-router'
+</script>
