@@ -1,0 +1,12 @@
+import { z } from 'zod'
+
+export const createCategoriaSchema = z.object({
+  nome: z.string().min(1),
+  tipo: z.enum(['receita', 'despesa']),
+  pai_id: z.coerce.bigint().optional(),
+})
+
+export const updateCategoriaSchema = createCategoriaSchema.partial()
+
+export type CreateCategoriaInput = z.infer<typeof createCategoriaSchema>
+export type UpdateCategoriaInput = z.infer<typeof updateCategoriaSchema>
