@@ -1390,3 +1390,233 @@ Convenções:
 - Resposta de sucesso sempre: { "code": 200, "status": "success", "data": "<id_criado>" }
 - Resposta de erro: { "code": 400|422, "status": "error", "message": "...", "data": [] }
 ```
+
+---
+
+## 26. PRODUTO — ABAS COMPLETAS DO FORMULÁRIO
+
+### Aba Dados
+| Campo | ID | Tipo |
+|-------|----|------|
+| Nome | — | text |
+| Código interno | — | text |
+| Código de barra | — | text |
+| Grupo do produto | — | autocomplete |
+| Movimenta estoque? | — | checkbox |
+| Habilitar nota fiscal? | — | checkbox |
+| Possui variações? | — | checkbox |
+| Possui composição? | — | checkbox |
+
+### Aba Valores
+| Campo | ID | Tipo |
+|-------|----|------|
+| Valor de custo | `valor_custo_medio` | decimal |
+| Despesas acessórias | `valor_despesas_acessorias` | decimal |
+| Outras despesas | `valor_outras_despesas` | decimal |
+| Custo final | `valor_custo` | decimal (calculado) |
+
+### Aba Estoque
+| Campo | ID (dinâmico: `{field}-{loja_id}`) | Tipo |
+|-------|------------------------------------|------|
+| Estoque mínimo | `minimo-{loja_id}` | decimal |
+| Estoque máximo | `maximo-{loja_id}` | decimal |
+| Quantidade atual | `quantidade-{loja_id}` | decimal |
+
+### Aba Fiscal
+| Campo | ID | Tipo | Observação |
+|-------|----|------|------------|
+| Cód. benefício | `cBenef` | text | Código de benefício fiscal |
+| NCM | `ncm` | autocomplete | Nomenclatura Comum do Mercosul |
+| CEST | `cest2` | autocomplete | Código Especificador da Substituição Tributária |
+| Origem | `ICMS_orig2` | select | 0=Nacional / 1-8=variações Estrangeiro |
+| Peso líquido | `pesoL2` | decimal | Em kg |
+| Peso bruto | `pesoB2` | decimal | Em kg |
+| Número FCI | `nFCI_Opc` | text | Ficha de Conteúdo de Importação |
+| Produto específico | `produto_especifico` | select | V=Veículo, M=Medicamento, A=Armamento, C=Combustível, P=Papel imune |
+
+**Select Origem (ICMS_orig2):**
+- `0` — Nacional, exceto as indicadas nos códigos de 3 a 5
+- `1` — Estrangeira - Importação direta, exceto a indicada no código 6
+- `2` — Estrangeira - Adquirida no mercado interno, exceto a indicada no código 7
+- `3` — Nacional, mercadoria ou bem com Conteúdo de Importação superior a 40%
+- `4` — Nacional, produção em conformidade com processos básicos
+- `5` — Nacional, mercadoria ou bem com Conteúdo de Importação inferior ou igual a 40%
+- `6` — Estrangeira - Importação direta, sem similar nacional, constante em lista da CAMEX
+- `7` — Estrangeira - Adquirida mercado interno, sem similar nacional, constante em lista da CAMEX
+- `8` — Nacional, mercadoria ou bem com Conteúdo de Importação superior a 70%
+
+**Seção "Regras fiscais":** lista de regras específicas de tributação (ICMS/PIS/COFINS) por produto; pode estar vazia quando não configurada.
+
+---
+
+## 27. ATENDIMENTOS / CHAMADOS
+
+### URL Base do Módulo: `/atendimentos`
+
+### Página inicial do módulo (hub):
+- **Chamados** → `/atendimentos/chamados`
+- **Assuntos** → `/atendimentos/assuntos`
+- **Formas de atendimento** → `/atendimentos/formas_atendimento`
+- **Situações** → `/atendimentos/situacoes`
+- **Campos extras** → `/atendimentos/campos_extras`
+- **Relatórios** → `/atendimentos/relatorios`
+- **Configurações** → `/atendimentos/configuracoes`
+- **Usuários** → `/atendimentos/usuarios`
+
+### Formulário Chamado (`/atendimentos/chamados/adicionar`)
+
+**Vue `$data.data`:**
+```json
+{
+  "Chamado": {
+    "cliente_id": null,
+    "nome_cliente": null,
+    "usuario_id": "string (id do atendente)",
+    "nome_usuario": "string",
+    "tipo": "R|A",
+    "visibilidade": 0,
+    "assunto_id": null,
+    "nome_assunto": null,
+    "forma_atendimento_id": null,
+    "nome_forma_atendimento": null,
+    "situacao_id": "string (id)",
+    "nome_situacao": null,
+    "descricao": null
+  },
+  "Cliente": {},
+  "AtendimentosAtributo": []
+}
+```
+
+**Campos do formulário:**
+| Campo | Name | Tipo | Opções |
+|-------|------|------|--------|
+| Cliente | `data.Chamado.cliente_id` | autocomplete | — |
+| Atendente | `data.Chamado.usuario_id` | autocomplete | — |
+| Tipo | `data.Chamado.tipo` | select | R=Receptivo, A=Ativo |
+| Visibilidade | `data.Chamado.visibilidade` | select | 0=Restrito, 1=Público |
+| Assunto | `data.Chamado.assunto_id` | autocomplete | — |
+| Forma de atendimento | `data.Chamado.forma_atendimento_id` | autocomplete | — |
+| Situação | `data.Chamado.situacao_id` | select | IDs dinâmicos por loja |
+| Descrição | — | textarea | — |
+
+### Colunas da Lista de Chamados
+| Chave Vue | Label | Visível padrão |
+|-----------|-------|----------------|
+| `Chamado.codigo` | Código | Não |
+| `Chamado.nome_cliente` | Cliente | Sim |
+| `Chamado.nome_assunto` | Assunto | Sim |
+| `Chamado.nome_situacao` | Situação | Sim |
+| `Chamado.ultima_situacao` | Última atualização | Sim |
+| `Chamado.nome_usuario` | Atendente | Sim |
+| `Chamado.cadastrado_em` | Data/Hora | Não |
+| `Chamado.acoes` | Ações | Sim |
+
+### Filtros da Lista de Chamados (`buscaAvancada`):
+```json
+{
+  "loja": "string",
+  "codigo": "",
+  "cliente-id": "",
+  "data_inicio": "DD/MM/YYYY",
+  "data_fim": "DD/MM/YYYY",
+  "usuario": "",
+  "situacao": "",
+  "assunto": "",
+  "forma-atendimento": "",
+  "atributo": ""
+}
+```
+
+---
+
+## 28. NF-e — WIZARD DE CONFIGURAÇÃO (`/notas_fiscais/configuracoes`)
+
+Fluxo em 4 etapas:
+
+### Etapa 1 — Dados da empresa
+**Modelo `data.Loja`:**
+```
+id, empresa_id, nome, logomarca, matriz, tipo_pessoa, razao_social, nome_fantasia, cnpj, cpf,
+documento, inscricao_estadual, isenta_ins_est, inscricao_municipal, cnae_id, codigo_cnae,
+descricao_cnae, regime_tributario, regime_especial_tributacao, telefone, celular, email, site,
+cep, logradouro, numero, complemento, bairro, cidade_id, nome_cidade, codigo_cidade,
+codigo_siafi, estado, codigo_estado, timezone, utc_normal, utc_verao, ativo, usuario_id,
+nome_usuario, cadastrado_em, modificado_em
+```
+
+**Select `tipo_pessoa`:** PJ=Pessoa jurídica | PF=Pessoa física | ES=Estrangeiro
+
+**Select `regime_tributario`:**
+- `1` — Simples Nacional
+- `2` — Simples Nacional - excesso de sublimite de receita bruta
+- `3` — Regime Normal
+- `4` — Simples Nacional - Microempreendedor Individual (MEI)
+
+**Select `regime_especial_tributacao`:**
+- `0` — Sem regime | `1` — Microempresa Municipal | `2` — Estimativa
+- `3` — Sociedade de Profissionais | `4` — Cooperativa | `5` — Microempresário Individual (MEI)
+- `6` — Microempresário e Empresa de Pequeno Porte (MEEPP) | `7` — Autônomo | `8` — Notário e Registrador
+
+**Modelo `data.LojasInscricoesEstaduaisSt`:** inscrições estaduais de substituição tributária (por estado)
+
+### Etapa 2 — Certificado digital
+- Tipo A1: arquivo `.pfx` + senha (validade 1 ano, armazenado no servidor)
+- Tipo A3: token físico (validade 3 anos, uso em computador único)
+- Campo checkbox "Apenas nota de produto"
+
+### Etapa 3 — Configurações de emissão
+**Modelo `data.LojasConfiguracao`:**
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `numeracao_nf` | integer | Última NF-e emitida |
+| `numeracao_serie_nfe` | integer | Série da NF-e (padrão: 1) |
+| `nota_fiscal_ambiente` | select | 1=Produção, 2=Homologação |
+| `contabilidade_sistema_contabil` | text | Sistema contábil integrado |
+| `versao_nfse` | integer | Versão do layout NFS-e |
+
+### Etapa 4 — Confirmação
+Revisão final e ativação da emissão de NF-e.
+
+---
+
+## 29. RELATÓRIOS — FILTROS POR MÓDULO
+
+### Financeiro
+
+#### Contas a Receber (`/relatorios_financeiros/relatorio_contas_receber`)
+**Filtros:** entidade (C/F/T/U/O), fornecedor_id, cliente_id, funcionario_id, transportadora_id, outros, nome, data_inicio, data_fim, data_inicio_emissao, data_fim_emissao, valor_inicio, valor_fim, baixado, situacao, categoria, conta_bancaria, forma_pagamento
+
+#### Contas a Pagar (`/relatorios_financeiros/relatorio_contas_pagar`)
+**Filtros:** entidade (C/F/T/U/O), fornecedor, cliente, funcionário, transportadora, outros, plano_de_contas, descricao_pagamento, data_inicio, data_fim, data_inicio_emissao, data_fim_emissao, valor_inicio, valor_fim, baixado (Todas/Em Aberto/Em Atraso/Confirmado), conta_bancaria, forma_pagamento, centro_custo
+**Extras:** "Exibir relatório detalhado", "Exibir transferências"
+
+#### Plano de Contas / DRE (`/relatorios_financeiros/relatorio_dre`)
+**Filtros:** entidade, fornecedor, cliente, funcionário, transportadora, outros, plano_de_contas, descricao, movimentação, data_inicio, data_fim, data_inicio_emissao, data_fim_emissao, valor_inicio, valor_fim, situacao, conta_bancaria, forma_pagamento, centro_custo
+**Extras:** "Exibir transferências"
+
+#### Extrato (`/relatorios_financeiros/relatorio_extrato`)
+**Filtros:** entidade, fornecedor, cliente, funcionário, transportadora, outros, plano_de_contas, descricao, data_inicio, data_fim, data_inicio_emissao, data_fim_emissao, valor_inicio, valor_fim, movimentação, situacao, conta_bancaria, forma_pagamento, centro_custo
+**Extras:** "Exibir relatório detalhado", "Exibir transferências", "Mostrar saldo anterior"
+
+### Estoque
+
+#### Estoque de Produtos (`/relatorios_estoque/relatorio_estoque_produtos`)
+**Filtros (colunas visíveis):** ativo, nome_produto, codigo, situacao_estoque, grupo, fornecedor, vr_varejo
+
+#### Compras (`/relatorios_estoque/relatorio_compras`)
+**Filtros:** data_inicio, data_fim, tipo, fornecedor, funcionario, situacao, transportadora, centro_custo
+
+### Ordens de Serviço (`/relatorios_ordens_servicos/index`)
+Sub-relatórios disponíveis:
+- **Ordens de serviços** — filtro: loja, tipo, período, cliente, vendedor, situação
+- **Equipamentos** — filtro: loja, tipo, período, cliente, vendedor, situação
+- **Situação X Tempo** — filtro: loja, tipo, período, cliente, vendedor, situação
+- **Comissão de vendedores** — filtro: loja, vendedor, período, situação
+- **Comissão de técnicos** — filtro: loja, técnico, período, situação
+
+### Notas Fiscais (`/relatorios_notas_fiscais/index`)
+Sub-relatórios disponíveis:
+- **NF-e** — filtro: número, situação, período
+- **NFC-e** — filtro: número, situação, período
+- **NFS-e** — filtro: número, situação, período

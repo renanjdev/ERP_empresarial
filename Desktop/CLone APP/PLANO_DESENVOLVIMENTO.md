@@ -494,7 +494,87 @@ usado como key no `v-for` antes de salvar.
 
 ---
 
-## 16. REFERÊNCIAS
+## 16. MÓDULO FISCAL — PRODUTO (Tab Fiscal)
+
+### Campos fiscais do produto (aba "Fiscal"):
+| Campo | ID | Descrição |
+|-------|----|-----------|
+| `cBenef` | text | Código de benefício fiscal |
+| `ncm` | autocomplete | NCM — Nomenclatura Comum do Mercosul |
+| `cest2` | autocomplete | CEST — Código Especificador da Substituição Tributária |
+| `ICMS_orig2` | select | Origem (0=Nacional, 1-8=estrangeiro/especial) |
+| `pesoL2` | decimal | Peso líquido (kg) |
+| `pesoB2` | decimal | Peso bruto (kg) |
+| `nFCI_Opc` | text | Número FCI |
+| `produto_especifico` | select | V=Veículo, M=Medicamento, A=Armamento, C=Combustível, P=Papel imune |
+
+### Regras Fiscais (`ProdutosTributacao`):
+Configuradas por produto para ICMS, PIS, COFINS, IPI. Cada regra contém:
+- CST/CSOSN (dependendo do regime tributário)
+- Alíquota e base de cálculo
+- Modalidade de determinação da BC
+- Redução da BC
+- CFOP (Código Fiscal de Operações e Prestações)
+
+---
+
+## 17. MÓDULO ATENDIMENTOS / CHAMADOS
+
+### Stack interna:
+- URL base: `/atendimentos`
+- É um sub-sistema com navegação própria (sidebar diferente)
+- Entidade principal: `Chamado`
+
+### Campos principais do Chamado:
+```
+cliente_id, usuario_id (atendente), tipo (R/A), visibilidade (0/1),
+assunto_id, forma_atendimento_id, situacao_id, descricao
+```
+
+### Entidades auxiliares:
+- `Assunto` — categorias de chamado (configurable por loja)
+- `FormaAtendimento` — canal (telefone, email, chat, presencial, etc.)
+- `Situacao` — estados do chamado (Em aberto, Em andamento, Atendido, Cancelado)
+- `AtendimentosAtributo` — campos extras configuráveis
+
+### Pinia store sugerido:
+```ts
+// stores/atendimentos.ts
+interface Chamado {
+  cliente_id: string | null
+  usuario_id: string
+  tipo: 'R' | 'A'
+  visibilidade: 0 | 1
+  assunto_id: string | null
+  forma_atendimento_id: string | null
+  situacao_id: string
+  descricao: string | null
+}
+```
+
+---
+
+## 18. NF-e — WIZARD DE CONFIGURAÇÃO
+
+### 4 Etapas:
+1. **Dados da empresa** — `Loja`: tipo_pessoa, razao_social, cnpj, inscricao_estadual/municipal, regime_tributario, regime_especial_tributacao, endereço completo, cnae
+2. **Certificado digital** — tipo A1 (upload .pfx + senha) ou A3 (token físico)
+3. **Configurações** — `LojasConfiguracao`: numeracao_nf, numeracao_serie_nfe, nota_fiscal_ambiente (1=Produção, 2=Homologação)
+4. **Confirmação** — revisão e ativação
+
+### Regimes tributários:
+```
+1 = Simples Nacional
+2 = Simples Nacional - excesso de sublimite
+3 = Regime Normal
+4 = MEI
+```
+
+### Componente Vue sugerido: `<NFeWizard>` com 4 steps, validação por etapa antes de avançar.
+
+---
+
+## 19. REFERÊNCIAS
 
 - **Mapeamento completo:** `gestaoclick_mapeamento.md`
 - **API base detectada:** `https://app.api.click.app`
