@@ -1,0 +1,15 @@
+{
+  "name": "erp-empresarial",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "build": "cd client && npm run build",
+    "db:migrate": "cd server && npx prisma migrate dev",
+    "db:seed": "cd server && npx prisma db seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

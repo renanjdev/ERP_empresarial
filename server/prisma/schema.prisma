@@ -1,0 +1,291 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Empresa {
+  id               BigInt    @id @default(autoincrement())
+  razao_social     String
+  nome_fantasia    String?
+  cnpj             String    @unique
+  email            String?
+  telefone         String?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  usuarios         Usuario[]
+  grupos_usuarios  GrupoUsuario[]
+  clientes         Cliente[]
+  fornecedores     Fornecedor[]
+  produtos         Produto[]
+  servicos         Servico[]
+  formas_pagamento FormaPagamento[]
+  categorias       CategoriaFinanceira[]
+  centros_custo    CentroCusto[]
+  grupos_produto   GrupoProduto[]
+  unidades         Unidade[]
+  permissoes       Permissao[]
+}
+
+model Usuario {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  grupo_usuario_id BigInt?
+  nome             String
+  email            String    @unique
+  senha_hash       String
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  empresa          Empresa        @relation(fields: [empresa_id], references: [id])
+  grupo_usuario    GrupoUsuario?  @relation(fields: [grupo_usuario_id], references: [id])
+}
+
+model GrupoUsuario {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  nome             String
+  created_at       DateTime  @default(now())
+
+  empresa          Empresa      @relation(fields: [empresa_id], references: [id])
+  permissoes       Permissao[]
+  usuarios         Usuario[]
+}
+
+model Permissao {
+  id                BigInt    @id @default(autoincrement())
+  empresa_id        BigInt
+  grupo_usuario_id  BigInt
+  modulo            String
+  acao              String
+  permitido         Boolean   @default(true)
+
+  empresa           Empresa       @relation(fields: [empresa_id], references: [id])
+  grupo_usuario     GrupoUsuario  @relation(fields: [grupo_usuario_id], references: [id])
+
+  @@index([empresa_id])
+  @@index([grupo_usuario_id])
+}
+
+model Cliente {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  nome             String
+  cpf_cnpj         String?
+  tipo_pessoa      String    @default("F")
+  email            String?
+  telefone         String?
+  celular          String?
+  observacoes      String?
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  empresa          Empresa            @relation(fields: [empresa_id], references: [id])
+  enderecos        ClienteEndereco[]
+  contatos         ClienteContato[]
+
+  @@index([empresa_id])
+}
+
+model ClienteEndereco {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  cliente_id       BigInt
+  cep              String?
+  logradouro       String?
+  numero           String?
+  complemento      String?
+  bairro           String?
+  cidade           String?
+  uf               String?
+
+  cliente          Cliente   @relation(fields: [cliente_id], references: [id], onDelete: Cascade)
+
+  @@index([empresa_id])
+}
+
+model ClienteContato {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  cliente_id       BigInt
+  nome             String
+  telefone         String?
+  email            String?
+  cargo            String?
+
+  cliente          Cliente   @relation(fields: [cliente_id], references: [id], onDelete: Cascade)
+
+  @@index([empresa_id])
+}
+
+model Fornecedor {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  razao_social     String
+  nome_fantasia    String?
+  cnpj             String?
+  email            String?
+  telefone         String?
+  observacoes      String?
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  empresa          Empresa              @relation(fields: [empresa_id], references: [id])
+  enderecos        FornecedorEndereco[]
+  contatos         FornecedorContato[]
+
+  @@index([empresa_id])
+}
+
+model FornecedorEndereco {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  fornecedor_id    BigInt
+  cep              String?
+  logradouro       String?
+  numero           String?
+  complemento      String?
+  bairro           String?
+  cidade           String?
+  uf               String?
+
+  fornecedor       Fornecedor @relation(fields: [fornecedor_id], references: [id], onDelete: Cascade)
+
+  @@index([empresa_id])
+}
+
+model FornecedorContato {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  fornecedor_id    BigInt
+  nome             String
+  telefone         String?
+  email            String?
+  cargo            String?
+
+  fornecedor       Fornecedor @relation(fields: [fornecedor_id], references: [id], onDelete: Cascade)
+
+  @@index([empresa_id])
+}
+
+model GrupoProduto {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  nome             String
+  created_at       DateTime  @default(now())
+
+  empresa          Empresa    @relation(fields: [empresa_id], references: [id])
+  produtos         Produto[]
+
+  @@index([empresa_id])
+}
+
+model Unidade {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  nome             String
+  sigla            String
+
+  empresa          Empresa    @relation(fields: [empresa_id], references: [id])
+  produtos         Produto[]
+
+  @@index([empresa_id])
+}
+
+model Produto {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  nome             String
+  sku              String?
+  valor_venda      Decimal   @default(0) @db.Decimal(18, 2)
+  valor_custo      Decimal   @default(0) @db.Decimal(18, 2)
+  unidade_id       BigInt?
+  grupo_id         BigInt?
+  descricao        String?
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  empresa          Empresa        @relation(fields: [empresa_id], references: [id])
+  unidade          Unidade?       @relation(fields: [unidade_id], references: [id])
+  grupo            GrupoProduto?  @relation(fields: [grupo_id], references: [id])
+  lojas            ProdutoLoja[]
+
+  @@index([empresa_id])
+}
+
+model ProdutoLoja {
+  id               BigInt    @id @default(autoincrement())
+  produto_id       BigInt
+  empresa_id       BigInt
+  estoque_atual    Decimal   @default(0) @db.Decimal(18, 4)
+  estoque_minimo   Decimal   @default(0) @db.Decimal(18, 4)
+
+  produto          Produto   @relation(fields: [produto_id], references: [id], onDelete: Cascade)
+
+  @@index([empresa_id])
+}
+
+model Servico {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  nome             String
+  valor            Decimal   @default(0) @db.Decimal(18, 2)
+  descricao        String?
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  empresa          Empresa   @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
+}
+
+model FormaPagamento {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  nome             String
+  tipo             String
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+
+  empresa          Empresa   @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
+}
+
+model CategoriaFinanceira {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  nome             String
+  tipo             String
+  pai_id           BigInt?
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+
+  empresa          Empresa               @relation(fields: [empresa_id], references: [id])
+  pai              CategoriaFinanceira?  @relation("CategoriaHierarquia", fields: [pai_id], references: [id])
+  filhas           CategoriaFinanceira[] @relation("CategoriaHierarquia")
+
+  @@index([empresa_id])
+}
+
+model CentroCusto {
+  id               BigInt    @id @default(autoincrement())
+  empresa_id       BigInt
+  nome             String
+  descricao        String?
+  ativo            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+
+  empresa          Empresa   @relation(fields: [empresa_id], references: [id])
+
+  @@index([empresa_id])
+}
